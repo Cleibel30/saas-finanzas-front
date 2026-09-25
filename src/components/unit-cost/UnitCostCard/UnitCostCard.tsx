@@ -5,10 +5,18 @@ import type { UnitCostResult } from '@/src/domain/repositories/IUnitCostReposito
 import './UnitCostCard.css';
 
 interface UnitCostCardProps {
-  data: UnitCostResult;
+  data: UnitCostResult & { batchStatus?: string; totalServicesSold?: number };
+  variant?: 'batch' | 'product' | 'service';
 }
 
-export default function UnitCostCard({ data }: UnitCostCardProps) {
+const BATCH_STATUS_LABELS: Record<string, string> = {
+  COMPLETED: 'Completado',
+  PENDING: 'Pendiente',
+  IN_PROGRESS: 'En Progreso',
+  CANCELLED: 'Cancelado',
+};
+
+export default function UnitCostCard({ data, variant = 'product' }: UnitCostCardProps) {
   return (
     <div className="unit-cost-card__grid">
       <div className="unit-cost-card">
@@ -37,6 +45,7 @@ export default function UnitCostCard({ data }: UnitCostCardProps) {
         <span className="unit-cost-card__primary">{formatBs(data.totalCostBs)}</span>
       </div>
 
+      {variant !== 'service' && (
       <div className="unit-cost-card">
         <div className="unit-cost-card__header">
           <div className="unit-cost-card__icon unit-cost-card__icon--qty">
@@ -50,6 +59,7 @@ export default function UnitCostCard({ data }: UnitCostCardProps) {
         <span className="unit-cost-card__label">Cantidad</span>
         <span className="unit-cost-card__primary">{formatNumber(data.totalQuantity, 0)}</span>
       </div>
+      )}
 
       <div className="unit-cost-card unit-cost-card--highlight">
         <div className="unit-cost-card__glow" />
@@ -84,6 +94,39 @@ export default function UnitCostCard({ data }: UnitCostCardProps) {
           {formatBs(data.weightedAvgUnitCostBs)}
         </span>
       </div>
+
+      {variant === 'batch' && data.batchStatus && (
+        <div className="unit-cost-card">
+          <div className="unit-cost-card__header">
+            <div className="unit-cost-card__icon unit-cost-card__icon--qty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+              </svg>
+            </div>
+            <span className="unit-cost-card__badge">Estado</span>
+          </div>
+          <span className="unit-cost-card__label">Status del Lote</span>
+          <span className="unit-cost-card__primary" style={{ fontSize: '1.125rem' }}>
+            {BATCH_STATUS_LABELS[data.batchStatus] ?? data.batchStatus}
+          </span>
+        </div>
+      )}
+
+      {variant === 'service' && (
+        <div className="unit-cost-card">
+          <div className="unit-cost-card__header">
+            <div className="unit-cost-card__icon unit-cost-card__icon--qty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+            </div>
+            <span className="unit-cost-card__badge">Servicios</span>
+          </div>
+          <span className="unit-cost-card__label">Servicios Vendidos</span>
+          <span className="unit-cost-card__primary">{formatNumber(data.totalServicesSold ?? 0, 0)}</span>
+        </div>
+      )}
     </div>
   );
 }

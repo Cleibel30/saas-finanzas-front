@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { startOfMonth, format } from 'date-fns';
 import { useUnitCostByBatch } from '@/src/use-cases/unit-cost/useUnitCostByBatch';
 import { useUnitCostByProduct } from '@/src/use-cases/unit-cost/useUnitCostByProduct';
 import { useUnitCostByService } from '@/src/use-cases/unit-cost/useUnitCostByService';
-import { useBatchList } from '@/src/use-cases/batch/useBatchList';
-import { useItemList } from '@/src/use-cases/item/useItemList';
 import UnitCostCard from '@/src/components/unit-cost/UnitCostCard';
-import type { ItemType } from '@/src/domain/entities/Item';
+import UnitCostFilters from '@/src/components/unit-cost/UnitCostFilters';
+import UnitCostChart from '@/src/components/unit-cost/UnitCostChart';
+import UnitCostSelector, { type UnitCostView } from '@/src/components/unit-cost/UnitCostSelector';
+import type { ChartDataPoint, UnitCostProductResult, UnitCostServiceResult } from '@/src/domain/repositories/IUnitCostRepository';
 import './UnitCostScreen.css';
 
 interface UnitCostScreenProps {
@@ -16,18 +18,18 @@ interface UnitCostScreenProps {
 
 function Skeleton() {
   return (
-    <div className="unit-cost-screen">
-      <div className="unit-cost-screen__header">
-        <div className="unit-cost-screen__skeleton" style={{ width: 200, height: 28 }} />
-        <div className="unit-cost-screen__skeleton" style={{ width: 300, height: 16, marginTop: 8 }} />
+    <div className='unit-cost-screen'>
+      <div className='unit-cost-screen__header'>
+        <div className='unit-cost-screen__skeleton' style={{ width: 200, height: 28 }} />
+        <div className='unit-cost-screen__skeleton' style={{ width: 300, height: 16, marginTop: 8 }} />
       </div>
-      <div className="unit-cost-screen__section">
-        <div className="unit-cost-card__grid">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="unit-cost-screen__skeleton-card">
-              <div className="unit-cost-screen__skeleton" style={{ width: 80, height: 11, marginBottom: 12 }} />
-              <div className="unit-cost-screen__skeleton" style={{ width: 120, height: 24, marginBottom: 4 }} />
-              <div className="unit-cost-screen__skeleton" style={{ width: 90, height: 13 }} />
+      <div className='unit-cost-screen__section'>
+        <div className='unit-cost-card__grid'>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className='unit-cost-screen__skeleton-card'>
+              <div className='unit-cost-screen__skeleton' style={{ width: 80, height: 11, marginBottom: 12 }} />
+              <div className='unit-cost-screen__skeleton' style={{ width: 120, height: 24, marginBottom: 4 }} />
+              <div className='unit-cost-screen__skeleton' style={{ width: 90, height: 13 }} />
             </div>
           ))}
         </div>
@@ -38,15 +40,15 @@ function Skeleton() {
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div className="unit-cost-screen">
-      <div className="unit-cost-screen__error">
-        <svg className="unit-cost-screen__error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="40" height="40">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="8" x2="12" y2="12" />
-          <line x1="12" y1="16" x2="12.01" y2="16" />
+    <div className='unit-cost-screen'>
+      <div className='unit-cost-screen__error'>
+        <svg className='unit-cost-screen__error-icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' width='40' height='40'>
+          <circle cx='12' cy='12' r='10' />
+          <line x1='12' y1='8' x2='12' y2='12' />
+          <line x1='12' y1='16' x2='12.01' y2='16' />
         </svg>
-        <p className="unit-cost-screen__error-text">{message}</p>
-        <button className="unit-cost-screen__error-btn" onClick={onRetry}>
+        <p className='unit-cost-screen__error-text'>{message}</p>
+        <button className='unit-cost-screen__error-btn' onClick={onRetry}>
           Reintentar
         </button>
       </div>
@@ -54,32 +56,24 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
-type UnitCostView = 'batch' | 'item';
+const today = new Date();
+const defaultStartDate = format(startOfMonth(today), 'yyyy-MM-dd');
+const defaultEndDate = format(today, 'yyyy-MM-dd');
 
 export default function UnitCostScreen({ companyId }: UnitCostScreenProps) {
   const [view, setView] = useState<UnitCostView>('batch');
-  const [selectedBatchId, setSelectedBatchId] = useState('');
-  const [selectedItemId, setSelectedItemId] = useState('');
-  const [selectedItemType, setSelectedItemType] = useState<ItemType | null>(null);
-  const [itemSearch, setItemSearch] = useState('');
+  const [selectedId, setSelectedId] = useState('');
+  const [startDate, setStartDate] = useState(defaultStartDate);
+  const [endDate, setEndDate] = useState(defaultEndDate);
 
-  const {
-    batches,
-    isLoading: batchesLoading,
-    error: batchesError,
-  } = useBatchList(companyId);
-
-  const {
-    items,
-    isLoading: itemsLoading,
-  } = useItemList(companyId, 'all', itemSearch);
+  const isBatch = view === 'batch';
 
   const {
     data: batchData,
     isLoading: batchCostLoading,
     error: batchCostError,
     refetch: refetchBatch,
-  } = useUnitCostByBatch(selectedBatchId || undefined, companyId);
+  } = useUnitCostByBatch(isBatch ? selectedId || undefined : undefined, companyId, startDate, endDate);
 
   const {
     data: productData,
@@ -87,8 +81,10 @@ export default function UnitCostScreen({ companyId }: UnitCostScreenProps) {
     error: productCostError,
     refetch: refetchProduct,
   } = useUnitCostByProduct(
-    selectedItemType === 'PRODUCT' ? selectedItemId || undefined : undefined,
+    view === 'product' ? selectedId || undefined : undefined,
     companyId,
+    startDate,
+    endDate,
   );
 
   const {
@@ -97,48 +93,55 @@ export default function UnitCostScreen({ companyId }: UnitCostScreenProps) {
     error: serviceCostError,
     refetch: refetchService,
   } = useUnitCostByService(
-    selectedItemType === 'SERVICE' ? selectedItemId || undefined : undefined,
+    view === 'service' ? selectedId || undefined : undefined,
     companyId,
+    startDate,
+    endDate,
   );
 
   const handleRetry = useCallback(() => {
-    if (view === 'batch') refetchBatch();
-    else if (selectedItemType === 'PRODUCT') refetchProduct();
+    if (isBatch) refetchBatch();
+    else if (view === 'product') refetchProduct();
     else refetchService();
-  }, [view, selectedItemType, refetchBatch, refetchProduct, refetchService]);
+  }, [isBatch, view, refetchBatch, refetchProduct, refetchService]);
 
   const handleViewChange = useCallback((nextView: UnitCostView) => {
     setView(nextView);
-    setSelectedBatchId('');
-    setSelectedItemId('');
-    setSelectedItemType(null);
-    setItemSearch('');
+    setSelectedId('');
   }, []);
 
-  const handleBatchSelect = useCallback((batchId: string) => {
-    setSelectedBatchId(batchId);
-    setSelectedItemId('');
-    setSelectedItemType(null);
+  const handleItemSelect = useCallback((id: string) => {
+    setSelectedId(id);
   }, []);
 
-  const handleItemSelect = useCallback((itemId: string, type: ItemType) => {
-    setSelectedItemId(itemId);
-    setSelectedItemType(type);
-    setSelectedBatchId('');
+  const handleRangeChange = useCallback((start: string, end: string) => {
+    setStartDate(start);
+    setEndDate(end);
   }, []);
 
-  const filteredItems = useMemo(() => {
-    if (!itemSearch.trim()) return items;
-    return items;
-  }, [items, itemSearch]);
+  const currentData = isBatch ? batchData : view === 'product' ? productData : serviceData;
+  const currentLoading = isBatch ? batchCostLoading : view === 'product' ? productCostLoading : serviceCostLoading;
+  const currentError = isBatch ? batchCostError : view === 'product' ? productCostError : serviceCostError;
 
-  const currentData = view === 'batch' ? batchData : selectedItemType === 'PRODUCT' ? productData : serviceData;
-  const currentLoading = view === 'batch' ? batchCostLoading : selectedItemType === 'PRODUCT' ? productCostLoading : serviceCostLoading;
-  const currentError = view === 'batch' ? batchCostError : selectedItemType === 'PRODUCT' ? productCostError : serviceCostError;
+  const hasSelection = !!selectedId;
 
-  const hasSelection = view === 'batch' ? !!selectedBatchId : !!selectedItemId;
+  const chartData = useMemo<ChartDataPoint[]>(() => {
+    if (!currentData) return [];
+    if (view === 'product' && 'chartData' in currentData) return (currentData as UnitCostProductResult).chartData ?? [];
+    if (view === 'service' && 'chartData' in currentData) return (currentData as UnitCostServiceResult).chartData ?? [];
+    return [];
+  }, [currentData, view]);
 
-  if (batchesLoading && itemsLoading) return <Skeleton />;
+  const chartIsValid = useMemo(() => {
+    if (!currentData) return true;
+    if (view === 'product' && 'isValid' in currentData) return (currentData as UnitCostProductResult).isValid ?? true;
+    if (view === 'service' && 'isValid' in currentData) return (currentData as UnitCostServiceResult).isValid ?? true;
+    return true;
+  }, [currentData, view]);
+
+  const variant = isBatch ? 'batch' : view === 'service' ? 'service' : 'product';
+
+  if (batchCostLoading && !currentData) return <Skeleton />;
 
   if (currentError && !currentData && hasSelection) {
     return (
@@ -150,110 +153,65 @@ export default function UnitCostScreen({ companyId }: UnitCostScreenProps) {
   }
 
   return (
-    <div className="unit-cost-screen">
-      <div className="unit-cost-screen__header">
-        <h1 className="unit-cost-screen__title">Costo Unitario</h1>
-        <p className="unit-cost-screen__subtitle">
+    <div className='unit-cost-screen'>
+      <div className='unit-cost-screen__header'>
+        <h1 className='unit-cost-screen__title'>Costo Unitario</h1>
+        <p className='unit-cost-screen__subtitle'>
           Análisis de costo por unidad por lote, producto o servicio.
         </p>
       </div>
 
-      <div className="unit-cost-screen__tabs">
-        <button
-          className={`unit-cost-screen__tab${view === 'batch' ? ' unit-cost-screen__tab--active' : ''}`}
-          onClick={() => handleViewChange('batch')}
-        >
-          Por Lote
-        </button>
-        <button
-          className={`unit-cost-screen__tab${view === 'item' ? ' unit-cost-screen__tab--active' : ''}`}
-          onClick={() => handleViewChange('item')}
-        >
-          Por Producto / Servicio
-        </button>
+      <div className='unit-cost-screen__filters-wrapper'>
+        <UnitCostFilters startDate={startDate} endDate={endDate} onChange={handleRangeChange} />
       </div>
 
-      {view === 'batch' && (
-        <div className="unit-cost-screen__selector">
-          <label className="unit-cost-screen__selector-label">Seleccionar lote</label>
-          <select
-            className="unit-cost-screen__select"
-            value={selectedBatchId}
-            onChange={(e) => handleBatchSelect(e.target.value)}
-          >
-            <option value="">-- Seleccionar lote --</option>
-            {batches.map((batch) => (
-              <option key={batch.id} value={batch.id}>
-                {batch.item?.name ?? 'Producto'} — {batch.quantity} unds ({batch.status})
-              </option>
-            ))}
-          </select>
-          {batchesError && (
-            <span className="unit-cost-screen__selector-error">{batchesError}</span>
-          )}
-        </div>
-      )}
+      <UnitCostSelector
+        view={view}
+        onViewChange={handleViewChange}
+        selectedId={selectedId}
+        onSelect={handleItemSelect}
+        companyId={companyId}
+      />
 
-      {view === 'item' && (
-        <div className="unit-cost-screen__selector">
-          <label className="unit-cost-screen__selector-label">Buscar producto o servicio</label>
-          <input
-            type="text"
-            className="unit-cost-screen__search-input"
-            placeholder="Escribe para buscar..."
-            value={itemSearch}
-            onChange={(e) => setItemSearch(e.target.value)}
-          />
-          <select
-            className="unit-cost-screen__select"
-            value={selectedItemId}
-            onChange={(e) => {
-              const item = filteredItems.find((i) => i.id === e.target.value);
-              if (item) handleItemSelect(item.id, item.type);
-            }}
-          >
-            <option value="">-- Seleccionar producto o servicio --</option>
-            {filteredItems.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} ({item.type === 'PRODUCT' ? 'Producto' : 'Servicio'})
-              </option>
-            ))}
-          </select>
-          {itemsLoading && (
-            <span className="unit-cost-screen__selector-loading">Buscando...</span>
-          )}
-        </div>
-      )}
-
-      <div className="unit-cost-screen__section">
+      <div className='unit-cost-screen__section'>
         {currentLoading && hasSelection ? (
-          <div className="unit-cost-card__grid">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="unit-cost-screen__skeleton-card">
-                <div className="unit-cost-screen__skeleton" style={{ width: 80, height: 11, marginBottom: 12 }} />
-                <div className="unit-cost-screen__skeleton" style={{ width: 120, height: 24, marginBottom: 4 }} />
-                <div className="unit-cost-screen__skeleton" style={{ width: 90, height: 13 }} />
+          <div className='unit-cost-card__grid'>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className='unit-cost-screen__skeleton-card'>
+                <div className='unit-cost-screen__skeleton' style={{ width: 80, height: 11, marginBottom: 12 }} />
+                <div className='unit-cost-screen__skeleton' style={{ width: 120, height: 24, marginBottom: 4 }} />
+                <div className='unit-cost-screen__skeleton' style={{ width: 90, height: 13 }} />
               </div>
             ))}
           </div>
         ) : currentData ? (
           <>
-            <div className="unit-cost-screen__item-header">
-              <span className="unit-cost-screen__item-label">
-                {view === 'batch' ? 'Lote de producci\u00f3n' : selectedItemType === 'PRODUCT' ? 'Producto' : 'Servicio'}
+            <div className='unit-cost-screen__item-header'>
+              <span className='unit-cost-screen__item-label'>
+                {isBatch ? 'Lote de producci\u00f3n' : view === 'product' ? 'Producto' : 'Servicio'}
               </span>
-              <span className="unit-cost-screen__item-name">{currentData.itemName}</span>
+              <span className='unit-cost-screen__item-name'>{currentData.itemName}</span>
             </div>
-            <UnitCostCard data={currentData} />
+            <UnitCostCard data={currentData} variant={variant} />
           </>
         ) : (
-          <div className="unit-cost-screen__placeholder">
-            {view === 'batch'
+          <div className='unit-cost-screen__placeholder'>
+            {isBatch
               ? 'Selecciona un lote para ver su costo unitario.'
               : 'Selecciona un producto o servicio para ver su costo unitario.'}
           </div>
         )}
       </div>
+
+      {!isBatch && hasSelection && currentData && (
+        <div className='unit-cost-screen__section'>
+          <UnitCostChart
+            data={chartData}
+            isValid={chartIsValid}
+            isLoading={currentLoading}
+          />
+        </div>
+      )}
     </div>
   );
 }

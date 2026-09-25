@@ -11,7 +11,12 @@ interface UnitCostByBatchState {
   error: string | null;
 }
 
-export function useUnitCostByBatch(batchId: string | undefined, companyId: string | undefined) {
+export function useUnitCostByBatch(
+  batchId: string | undefined,
+  companyId: string | undefined,
+  startDate?: string,
+  endDate?: string,
+) {
   const { session, isAuthenticated, isLoading: sessionLoading } = useSession();
   const [state, setState] = useState<UnitCostByBatchState>({
     data: null,
@@ -25,8 +30,8 @@ export function useUnitCostByBatch(batchId: string | undefined, companyId: strin
     const token = (session as { access_token: string }).access_token;
     const repo = new UnitCostRepositoryImpl(token);
 
-    return repo.getByBatch(batchId, companyId);
-  }, [session, isAuthenticated, companyId, batchId]);
+    return repo.getByBatch(batchId, companyId, startDate, endDate);
+  }, [session, isAuthenticated, companyId, batchId, startDate, endDate]);
 
   const refetch = useCallback(() => {
     void (async () => {

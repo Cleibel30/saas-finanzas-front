@@ -35,18 +35,29 @@ interface TransactionFormProps {
   hideFooter?: boolean;
   onLoadingChange?: (loading: boolean) => void;
   defaultBatchId?: string;
+  initialCategory?: Category | null;
+  initialItem?: Item | null;
 }
 
-export default function TransactionForm({ companyId, transaction, onSave, onCancel, id, hideFooter, onLoadingChange, defaultBatchId }: TransactionFormProps) {
+export default function TransactionForm({ companyId, transaction, onSave, onCancel, id, hideFooter, onLoadingChange, defaultBatchId, initialCategory, initialItem }: TransactionFormProps) {
   const isEdit = !!transaction;
   const { createTransactions, loading: creating } = useCreateTransaction();
   const { updateTransaction, loading: updating } = useUpdateTransaction();
   const { searchItem, listItems, listProducts, listServices, result: itemResult, loading: searchingItem } = useItemSearch();
   const { dollarRate: contextRate, isLoading: rateLoading } = useDollarRateContext();
 
-  const [category, setCategory] = useState<Category | null>(null);
-  const [itemQuery, setItemQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [category, setCategory] = useState<Category | null>(() => {
+    if (isEdit && initialCategory) return initialCategory;
+    return null;
+  });
+  const [itemQuery, setItemQuery] = useState(() => {
+    if (isEdit && initialItem) return initialItem.name;
+    return '';
+  });
+  const [selectedItem, setSelectedItem] = useState<Item | null>(() => {
+    if (isEdit && initialItem) return initialItem;
+    return null;
+  });
   const [itemOpen, setItemOpen] = useState(false);
   const [allItems, setAllItems] = useState<Item[]>([]);
   const [allItemsLoading, setAllItemsLoading] = useState(false);
@@ -79,7 +90,12 @@ export default function TransactionForm({ companyId, transaction, onSave, onCanc
   const [status, setStatus] = useState<TransactionStatus>(transaction?.status ?? 'COMPLETED');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(transaction?.paymentMethod ?? 'TRANSFERENCIA_BANCARIA_NACIONAL');
   const [paymentReference, setPaymentReference] = useState(transaction?.paymentReference ?? '');
-  const [paymentDate, setPaymentDate] = useState(transaction?.paymentDate ?? '');
+  const [paymentDate, setPaymentDate] = useState(() => {
+    if (!transaction?.paymentDate) return '';
+    // Extract YYYY-MM-DD from ISO datetime string if needed
+    const dateStr = transaction.paymentDate;
+    return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+  });
   const [description, setDescription] = useState(transaction?.description ?? '');
   const [stockEffect, setStockEffect] = useState<StockEffect>(transaction?.stockEffect ?? 'DECREMENT');
   const [showQuantity, setShowQuantity] = useState(false);

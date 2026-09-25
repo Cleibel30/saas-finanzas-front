@@ -1,17 +1,27 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { startOfMonth, format } from 'date-fns';
 import { useSession } from '@/src/use-cases/auth/useSession';
 import { UnitCostRepositoryImpl } from '@/src/infrastructure/repositories/UnitCostRepositoryImpl';
-import type { UnitCostResult } from '@/src/domain/repositories/IUnitCostRepository';
+import type { UnitCostResult, UnitCostServiceResult } from '@/src/domain/repositories/IUnitCostRepository';
+
+const today = new Date();
+const defaultStartDate = format(startOfMonth(today), 'yyyy-MM-dd');
+const defaultEndDate = format(today, 'yyyy-MM-dd');
 
 interface UnitCostByServiceState {
-  data: UnitCostResult | null;
+  data: (UnitCostResult & { chartData?: UnitCostServiceResult['chartData']; isValid?: boolean; totalServicesSold?: number }) | null;
   isLoading: boolean;
   error: string | null;
 }
 
-export function useUnitCostByService(itemId: string | undefined, companyId: string | undefined) {
+export function useUnitCostByService(
+  itemId: string | undefined,
+  companyId: string | undefined,
+  startDate?: string,
+  endDate?: string,
+) {
   const { session, isAuthenticated, isLoading: sessionLoading } = useSession();
   const [state, setState] = useState<UnitCostByServiceState>({
     data: null,
@@ -25,8 +35,11 @@ export function useUnitCostByService(itemId: string | undefined, companyId: stri
     const token = (session as { access_token: string }).access_token;
     const repo = new UnitCostRepositoryImpl(token);
 
-    return repo.getByService(itemId, companyId);
-  }, [session, isAuthenticated, companyId, itemId]);
+    // Siempre usar endpoint con date range
+    const start = startDate ?? defaultStartDate;
+    const end = endDate ?? defaultEndDate;
+    return repo.getByServiceWithDateRange(itemId, companyId, start, end);
+  }, [session, isAuthenticated, companyId, itemId, startDate, endDate]);
 
   const refetch = useCallback(() => {
     void (async () => {

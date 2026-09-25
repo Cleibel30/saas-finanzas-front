@@ -16,6 +16,17 @@ interface CategoryListProps {
   onDelete?: (category: Category) => void;
 }
 
+const TYPE_LABELS: Record<string, string> = {
+  OPERATING: 'Operación',
+  INVESTING: 'Inversión',
+  FINANCING: 'Financiamiento',
+};
+
+const FLOW_LABELS: Record<string, string> = {
+  INFLOW: 'Ingreso',
+  OUTFLOW: 'Egreso',
+};
+
 function getPageNumbers(current: number, total: number): (number | 'ellipsis')[] {
   if (total <= 7) {
     return Array.from({ length: total }, (_, i) => i + 1);
@@ -191,12 +202,12 @@ export default function CategoryList({ companyId, onNew, onEdit, onDelete }: Cat
                     <td className="category-list__td category-list__td--name">{cat.name}</td>
                     <td className="category-list__td">
                       <span className={`category-list__badge category-list__badge--${cat.type.toLowerCase()}`}>
-                        {cat.type}
+                        {TYPE_LABELS[cat.type] ?? cat.type}
                       </span>
                     </td>
                     <td className="category-list__td">
                       <span className={`category-list__badge category-list__badge--${cat.flowDirection.toLowerCase()}`}>
-                        {cat.flowDirection}
+                        {FLOW_LABELS[cat.flowDirection] ?? cat.flowDirection}
                       </span>
                     </td>
                     <td className="category-list__td">

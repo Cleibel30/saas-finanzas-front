@@ -125,21 +125,21 @@ export default function CategoryForm({ companyId, category, onSave, onCancel, id
                   value={type}
                   onChange={(e) => { setType(e.target.value as CategoryType); setServerError(null); }}
                 >
-                  <option value="OPERATING">OPERATING</option>
-                  <option value="INVESTING">INVESTING</option>
-                  <option value="FINANCING">FINANCING</option>
+                  <option value="OPERATING">Operación</option>
+                  <option value="INVESTING">Inversión</option>
+                  <option value="FINANCING">Financiamiento</option>
                 </select>
                 <span className="material-symbols-outlined category-form__select-arrow">expand_more</span>
               </div>
               <div className="category-form__badge-row">
                 <span className={`category-form__badge category-form__badge--operating${type !== 'OPERATING' ? ' category-form__badge--inactive' : ''}`}>
-                  OPERATING
+                  Operación
                 </span>
                 <span className={`category-form__badge category-form__badge--investing${type !== 'INVESTING' ? ' category-form__badge--inactive' : ''}`}>
-                  INVESTING
+                  Inversión
                 </span>
                 <span className={`category-form__badge category-form__badge--financing${type !== 'FINANCING' ? ' category-form__badge--inactive' : ''}`}>
-                  FINANCING
+                  Financiamiento
                 </span>
               </div>
             </div>
@@ -160,7 +160,7 @@ export default function CategoryForm({ companyId, category, onSave, onCancel, id
                   }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: '1.125rem' }}>trending_up</span>
-                  <span>INFLOW</span>
+                  <span>Ingreso</span>
                 </button>
                 <button
                   type="button"
@@ -168,7 +168,7 @@ export default function CategoryForm({ companyId, category, onSave, onCancel, id
                   onClick={() => { setFlowDirection('OUTFLOW'); setServerError(null); }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: '1.125rem' }}>trending_down</span>
-                  <span>OUTFLOW</span>
+                  <span>Egreso</span>
                 </button>
               </div>
             </div>
