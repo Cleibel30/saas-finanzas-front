@@ -11,35 +11,66 @@ interface SessionState {
   isAuthenticated: boolean;
 }
 
-export function useSession() {
-  const [state, setState] = useState<SessionState>({
-    session: null,
-    user: null,
-    isLoading: true,
-    isAuthenticated: false,
-  });
+const initialState: SessionState = {
+  session: null,
+  user: null,
+  isLoading: true,
+  isAuthenticated: false,
+};
+
+export function useSession(): SessionState {
+  const [state, setState] = useState<SessionState>(initialState);
 
   useEffect(() => {
     const supabase = createClient();
+    let mounted = true;
 
+    // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       if (session?.user) {
-        const user: User = {
-          id: session.user.id,
-          name: session.user.user_metadata?.name ?? session.user.email ?? '',
-          email: session.user.email ?? '',
-          role: session.user.app_metadata?.role ?? 'USER',
-          tokenBalance: session.user.user_metadata?.tokenBalance ?? 0,
-          isSuspended: session.user.app_metadata?.isSuspended ?? session.user.user_metadata?.isSuspended ?? false,
-          createdAt: session.user.created_at ?? '',
-        };
-
-        setState({ session, user, isLoading: false, isAuthenticated: true });
+        setState(mapSessionToState(session));
       } else {
-        setState({ session: null, user: null, isLoading: false, isAuthenticated: false });
+        setState({ ...initialState, isLoading: false });
       }
     });
+
+    // Listen for auth changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!mounted) return;
+        if (session?.user) {
+          setState(mapSessionToState(session));
+        } else {
+          setState({ ...initialState, isLoading: false });
+        }
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return state;
+}
+
+function mapSessionToState(session: { user: { id: string; user_metadata?: Record<string, unknown>; email?: string; app_metadata?: Record<string, unknown>; created_at?: string } }): SessionState {
+  const u = session.user;
+  const role = (u.app_metadata?.role as string) ?? 'USER';
+  return {
+    session,
+    user: {
+      id: u.id,
+      name: (u.user_metadata?.name as string) ?? (u.email as string) ?? '',
+      email: (u.email as string) ?? '',
+      role: (role === 'ADMIN' ? 'ADMIN' : 'USER') as 'USER' | 'ADMIN',
+      tokenBalance: (u.user_metadata?.tokenBalance as number) ?? 0,
+      isSuspended: (u.app_metadata?.isSuspended as boolean) ?? (u.user_metadata?.isSuspended as boolean) ?? false,
+      createdAt: u.created_at ?? '',
+    },
+    isLoading: false,
+    isAuthenticated: true,
+  };
 }

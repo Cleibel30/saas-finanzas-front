@@ -9,7 +9,9 @@ import UnitCostCard from '@/src/components/unit-cost/UnitCostCard';
 import UnitCostFilters from '@/src/components/unit-cost/UnitCostFilters';
 import UnitCostChart from '@/src/components/unit-cost/UnitCostChart';
 import UnitCostSelector, { type UnitCostView } from '@/src/components/unit-cost/UnitCostSelector';
-import type { ChartDataPoint, UnitCostProductResult, UnitCostServiceResult } from '@/src/domain/repositories/IUnitCostRepository';
+import { PriceMarginModal } from '@/src/components/unit-cost/PriceMarginModal';
+import Modal from '@/src/components/shared/Modal';
+import type { ChartDataPoint, UnitCostProductResult, UnitCostServiceResult, UnitCostResult } from '@/src/domain/repositories/IUnitCostRepository';
 import './UnitCostScreen.css';
 
 interface UnitCostScreenProps {
@@ -123,7 +125,20 @@ export default function UnitCostScreen({ companyId }: UnitCostScreenProps) {
   const currentLoading = isBatch ? batchCostLoading : view === 'product' ? productCostLoading : serviceCostLoading;
   const currentError = isBatch ? batchCostError : view === 'product' ? productCostError : serviceCostError;
 
-  const hasSelection = !!selectedId;
+const hasSelection = !!selectedId;
+
+  const [isPriceMarginOpen, setIsPriceMarginOpen] = useState(false);
+  const [selectedUnitCostData, setSelectedUnitCostData] = useState<(UnitCostResult & { batchStatus?: string; totalServicesSold?: number }) | null>(null);
+
+  const openPriceMargin = useCallback((data: UnitCostResult & { batchStatus?: string; totalServicesSold?: number }) => {
+    setSelectedUnitCostData(data);
+    setIsPriceMarginOpen(true);
+  }, []);
+
+  const closePriceMargin = useCallback(() => {
+    setIsPriceMarginOpen(false);
+    setSelectedUnitCostData(null);
+  }, []);
 
   const chartData = useMemo<ChartDataPoint[]>(() => {
     if (!currentData) return [];
@@ -184,13 +199,25 @@ export default function UnitCostScreen({ companyId }: UnitCostScreenProps) {
               </div>
             ))}
           </div>
-        ) : currentData ? (
+) : currentData ? (
           <>
             <div className='unit-cost-screen__item-header'>
-              <span className='unit-cost-screen__item-label'>
-                {isBatch ? 'Lote de producci\u00f3n' : view === 'product' ? 'Producto' : 'Servicio'}
-              </span>
-              <span className='unit-cost-screen__item-name'>{currentData.itemName}</span>
+              <div className='unit-cost-screen__item-info'>
+                <span className='unit-cost-screen__item-label'>
+                  {isBatch ? 'Lote de producci\u00f3n' : view === 'product' ? 'Producto' : 'Servicio'}
+                </span>
+                <span className='unit-cost-screen__item-name'>{currentData.itemName}</span>
+              </div>
+              <button
+                className='unit-cost-screen__action-btn'
+                onClick={() => openPriceMargin(currentData)}
+                aria-label='Calcular precio con margen'
+              >
+                <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
+                  <path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' />
+                </svg>
+                <span>Calcular precio con margen</span>
+              </button>
             </div>
             <UnitCostCard data={currentData} variant={variant} />
           </>
@@ -203,7 +230,7 @@ export default function UnitCostScreen({ companyId }: UnitCostScreenProps) {
         )}
       </div>
 
-      {!isBatch && hasSelection && currentData && (
+{!isBatch && hasSelection && currentData && (
         <div className='unit-cost-screen__section'>
           <UnitCostChart
             data={chartData}
@@ -212,6 +239,14 @@ export default function UnitCostScreen({ companyId }: UnitCostScreenProps) {
           />
         </div>
       )}
+
+      <Modal open={isPriceMarginOpen} onClose={closePriceMargin} title='Calcular Precio con Margen'>
+        <PriceMarginModal
+          data={selectedUnitCostData}
+          variant={variant}
+          onClose={closePriceMargin}
+        />
+      </Modal>
     </div>
   );
 }

@@ -66,6 +66,8 @@ export default function Header({
     onCompanySwitch?.(id);
   };
 
+  const resolvedCompanyName = companyName || (companyId ? companies.find((c) => c.id === companyId)?.name : null);
+
   return (
     <header className="header">
       <div className="header__left">
@@ -92,7 +94,7 @@ export default function Header({
               onClick={() => setCompanyOpen(!companyOpen)}
             >
               <span className="material-symbols-outlined header__company-icon">business</span>
-              <span className="header__company-name">{companyName || 'Cargando...'}</span>
+              <span className="header__company-name">{resolvedCompanyName || 'Cargando...'}</span>
               <span className="material-symbols-outlined header__company-chevron">
                 {companyOpen ? 'expand_less' : 'expand_more'}
               </span>

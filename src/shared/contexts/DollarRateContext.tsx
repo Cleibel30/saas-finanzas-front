@@ -14,8 +14,16 @@ interface DollarRateContextValue {
 
 const DollarRateContext = createContext<DollarRateContextValue | null>(null);
 
-export function DollarRateProvider({ companyId, children }: { companyId?: string; children: ReactNode }) {
-  const value = useDollarRate(companyId);
+export function DollarRateProvider({ 
+  companyId, 
+  initialDollarRate, 
+  children 
+}: { 
+  companyId?: string; 
+  initialDollarRate?: DollarRate | null;
+  children: ReactNode 
+}) {
+  const value = useDollarRate(companyId, initialDollarRate);
   return (
     <DollarRateContext.Provider value={value}>
       {children}

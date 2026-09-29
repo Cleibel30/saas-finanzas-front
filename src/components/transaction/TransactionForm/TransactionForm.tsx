@@ -59,6 +59,21 @@ export default function TransactionForm({ companyId, transaction, onSave, onCanc
     return null;
   });
   const [itemOpen, setItemOpen] = useState(false);
+
+  useEffect(() => {
+    if (isEdit && initialCategory) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCategory(initialCategory);
+    }
+  }, [isEdit, initialCategory]);
+
+  useEffect(() => {
+    if (isEdit && initialItem) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedItem(initialItem);
+      setItemQuery(initialItem.name);
+    }
+  }, [isEdit, initialItem]);
   const [allItems, setAllItems] = useState<Item[]>([]);
   const [allItemsLoading, setAllItemsLoading] = useState(false);
   const [rawAmountUSD, setRawAmountUSD] = useState(() => {

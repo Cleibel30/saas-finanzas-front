@@ -12,13 +12,20 @@ export interface DollarRate {
   fechaActualizacion: string;
 }
 
-export function useDollarRate(companyId?: string) {
-  const [dollarRate, setDollarRate] = useState<DollarRate | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export function useDollarRate(companyId?: string, initialDollarRate?: DollarRate | null) {
+  const [dollarRate, setDollarRate] = useState<DollarRate | null>(initialDollarRate ?? null);
+  const [isLoading, setIsLoading] = useState(initialDollarRate ? false : true);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<'official' | 'manual'>('official');
 
   useEffect(() => {
+    // If we have initial data, don't fetch again unless companyId changes
+    if (initialDollarRate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSource('official');
+      return;
+    }
+
     let cancelled = false;
 
     const init = async () => {
@@ -68,7 +75,7 @@ export function useDollarRate(companyId?: string) {
     return () => {
       cancelled = true;
     };
-  }, [companyId]);
+  }, [companyId, initialDollarRate]);
 
   const setManualRate = useCallback((rate: number) => {
     if (!companyId) return;

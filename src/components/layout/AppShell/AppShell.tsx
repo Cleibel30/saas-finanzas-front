@@ -6,9 +6,10 @@ import Link from 'next/link';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import Header from '@/src/components/layout/Header';
 import ChatWidget from '@/src/components/finance-chat/ChatWidget';
-import { useCompany } from '@/src/use-cases/company/useCompany';
 import { useMyCompanies } from '@/src/use-cases/company/useMyCompanies';
 import { DollarRateProvider, useDollarRateContext } from '@/src/shared/contexts/DollarRateContext';
+import type { Company } from '@/src/domain/entities/Company';
+import type { DollarRate } from '@/src/use-cases/dollar/useDollarRate';
 import './AppShell.css';
 
 interface NavItem {
@@ -34,11 +35,23 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Hoja de Cálculo', href: '/excel', icon: 'grid_on' },
 ];
 
-export default function AppShell({ children }: { children: ReactNode }) {
+export default function AppShell({ 
+  children, 
+  companyId: companyIdProp,
+  company, 
+  companies, 
+  initialDollarRate 
+}: { 
+  children: ReactNode;
+  companyId?: string;
+  company?: Company | null;
+  companies?: Company[];
+  initialDollarRate?: DollarRate | null;
+}) {
   const params = useParams();
   const pathname = usePathname();
   const router = useRouter();
-  const companyId = params.companyId as string;
+  const companyId = companyIdProp ?? params.companyId as string;
   const hasCompany = !!companyId;
 
   const segments = pathname.split('/');
@@ -52,8 +65,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   const isFullPage = isExcelEditor || isTransactionForm;
 
-  const { company } = useCompany(companyId);
-  const { companies } = useMyCompanies();
+  const { companies: fetchedCompanies } = useMyCompanies();
+  const companiesToUse = companies ?? fetchedCompanies ?? [];
 
   const sidebarRef = useRef<HTMLElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -100,7 +113,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <DollarRateProvider companyId={companyId}>
+    <DollarRateProvider companyId={companyId} initialDollarRate={initialDollarRate}>
       <div className={isFullPage ? 'app-shell app-shell--editor' : 'app-shell'}>
         <Header
           onToggleSidebar={toggleSidebar}
@@ -108,7 +121,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           onBack={handleBack}
           companyId={companyId}
           companyName={company?.name}
-          companies={companies}
+          companies={companiesToUse}
           onCompanySwitch={handleCompanySwitch}
         />
         <div className="app-shell__body">
@@ -125,7 +138,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <SidebarUtils
                 companyId={companyId}
                 companyName={company?.name}
-                companies={companies}
+                companies={companiesToUse}
                 onCompanySwitch={handleCompanySwitch}
                 companyOpen={companyOpen}
                 setCompanyOpen={setCompanyOpen}
@@ -206,6 +219,8 @@ function SidebarUtils({
 }: SidebarUtilsProps) {
   const { dollarRate, isLoading: rateLoading, source } = useDollarRateContext();
 
+  const resolvedCompanyName = companyName || companies.find((c) => c.id === companyId)?.name;
+
   return (
     <div className="app-shell__sidebar-utils">
       <div className="app-shell__sidebar-utils-item" ref={companyRef}>
@@ -214,7 +229,7 @@ function SidebarUtils({
           onClick={() => setCompanyOpen(!companyOpen)}
         >
           <span className="material-symbols-outlined app-shell__sidebar-utils-icon">business</span>
-          <span className="app-shell__sidebar-utils-label">{companyName || 'Cargando...'}</span>
+          <span className="app-shell__sidebar-utils-label">{resolvedCompanyName || 'Cargando...'}</span>
           <span className="material-symbols-outlined app-shell__sidebar-utils-chevron">
             {companyOpen ? 'expand_less' : 'expand_more'}
           </span>
